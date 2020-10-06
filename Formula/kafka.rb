@@ -28,8 +28,6 @@ class Kafka < Formula
   depends_on java: "1.8"
   depends_on "zookeeper"
 
-  conflicts_with "confluent-platform", because: "both install identically named Kafka related executables"
-
   def install
     data = var/"lib"
     inreplace "config/server.properties",
@@ -45,7 +43,6 @@ class Kafka < Formula
 
     prefix.install "bin"
     bin.env_script_all_files(libexec/"bin", Language::Java.java_home_env("1.8"))
-    Dir["#{bin}/*.sh"].each { |f| mv f, f.to_s.gsub(/.sh$/, "") }
 
     mv "config", "kafka"
     etc.install "kafka"
@@ -55,7 +52,7 @@ class Kafka < Formula
     (var+"log/kafka").mkpath
   end
 
-  plist_options manual: "zookeeper-server-start #{HOMEBREW_PREFIX}/etc/kafka/zookeeper.properties & kafka-server-start #{HOMEBREW_PREFIX}/etc/kafka/server.properties"
+  plist_options manual: "zookeeper-server-start.sh #{HOMEBREW_PREFIX}/etc/kafka/zookeeper.properties & kafka-server-start.sh #{HOMEBREW_PREFIX}/etc/kafka/server.properties"
 
   def plist
     <<~EOS
@@ -69,7 +66,7 @@ class Kafka < Formula
           <string>#{HOMEBREW_PREFIX}</string>
           <key>ProgramArguments</key>
           <array>
-              <string>#{opt_bin}/kafka-server-start</string>
+              <string>#{opt_bin}/kafka-server-start.sh</string>
               <string>#{etc}/kafka/server.properties</string>
           </array>
           <key>RunAtLoad</key>
@@ -96,30 +93,30 @@ class Kafka < Formula
 
     begin
       fork do
-        exec "#{bin}/zookeeper-server-start #{testpath}/kafka/zookeeper.properties " \
+        exec "#{bin}/zookeeper-server-start.sh #{testpath}/kafka/zookeeper.properties " \
              "> #{testpath}/test.zookeeper-server-start.log 2>&1"
       end
 
       sleep 15
 
       fork do
-        exec "#{bin}/kafka-server-start #{testpath}/kafka/server.properties " \
+        exec "#{bin}/kafka-server-start.sh #{testpath}/kafka/server.properties " \
              "> #{testpath}/test.kafka-server-start.log 2>&1"
       end
 
       sleep 30
 
-      system "#{bin}/kafka-topics --zookeeper localhost:2181 --create --if-not-exists --replication-factor 1 " \
+      system "#{bin}/kafka-topics.sh --zookeeper localhost:2181 --create --if-not-exists --replication-factor 1 " \
              "--partitions 1 --topic test > #{testpath}/kafka/demo.out 2>/dev/null"
-      pipe_output "#{bin}/kafka-console-producer --broker-list localhost:9092 --topic test 2>/dev/null",
+      pipe_output "#{bin}/kafka-console-producer.sh --broker-list localhost:9092 --topic test 2>/dev/null",
                   "test message"
-      system "#{bin}/kafka-console-consumer --bootstrap-server localhost:9092 --topic test --from-beginning " \
+      system "#{bin}/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic test --from-beginning " \
              "--max-messages 1 >> #{testpath}/kafka/demo.out 2>/dev/null"
-      system "#{bin}/kafka-topics --zookeeper localhost:2181 --delete --topic test >> #{testpath}/kafka/demo.out " \
+      system "#{bin}/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test >> #{testpath}/kafka/demo.out " \
              "2>/dev/null"
     ensure
-      system "#{bin}/kafka-server-stop"
-      system "#{bin}/zookeeper-server-stop"
+      system "#{bin}/kafka-server-stop.sh"
+      system "#{bin}/zookeeper-server-stop.sh"
       sleep 10
     end
 

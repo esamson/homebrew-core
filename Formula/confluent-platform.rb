@@ -16,8 +16,6 @@ class ConfluentPlatform < Formula
 
   depends_on java: "1.8"
 
-  conflicts_with "kafka", because: "kafka also ships with identically named Kafka related executables"
-
   def install
     libexec.install %w[bin etc libexec share]
     rm_rf libexec/"bin/windows"
